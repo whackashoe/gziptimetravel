@@ -45,6 +45,7 @@ int main(int argc, char ** argv)
     
     int i; /*for loop iterator*/
     int c; /*option iteration*/
+    opterr = 0;
     while((c = getopt (argc, argv, "ps:S-:")) != -1) {
         switch(c) {
             case 'p':
