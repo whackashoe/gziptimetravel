@@ -10,6 +10,8 @@ Installation
 
 * `cd gziptimetravel`
 
+* `cmake .`
+
 * `make`
 
 * `sudo make install`
