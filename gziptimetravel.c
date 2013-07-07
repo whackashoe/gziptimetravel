@@ -18,7 +18,7 @@
 
 #include <gziptimetravel.h>
 
-void displayHelp(void);
+void displayHelp(char * name);
 void displayVersion(void);
 time_t getTime(const unsigned char vals[4]);
 void printTime(const time_t t);
@@ -62,7 +62,7 @@ int main(int argc, char ** argv)
                 break;
             case '-':
                 if(strcmp(optarg, "help") == 0) {
-                    displayHelp();
+                    displayHelp(argv[0]);
                     exit(EXIT_SUCCESS);
                 }
                 if(strcmp(optarg, "version") == 0) {
@@ -78,7 +78,7 @@ int main(int argc, char ** argv)
                 else
                     fprintf (stderr, "Unknown option character `\\x%x'.\n", optopt);
 
-                fprintf(stderr, "Try gziptimetravel --help\n");
+                fprintf(stderr, "Try %s --help\n", argv[0]);
                 exit(EXIT_FAILURE);
             default:
                 exit(EXIT_FAILURE);
@@ -93,7 +93,7 @@ int main(int argc, char ** argv)
     }
     
     if(!fileflag) {
-        fprintf(stderr, "Missing file operand (\"gziptimetravel --help\" for help)\n");
+        fprintf(stderr, "Missing file operand (\"%s --help\" for help)\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
@@ -105,7 +105,7 @@ int main(int argc, char ** argv)
     
     gheaderbytes = fread(gheaderbuffer, sizeof(unsigned char), sizeof(gheaderbuffer), fp);
     if(gheaderbytes < sizeof(gheaderbuffer)) {
-        fprintf(stderr, "%s%lu%s\n", "Only read ", gheaderbytes, " bytes");
+        fprintf(stderr, "Only read %lu bytes\n", gheaderbytes);
         exit(EXIT_FAILURE);
     }
 
@@ -119,7 +119,7 @@ int main(int argc, char ** argv)
      */
 
     if(gheaderbuffer[0] != ID1 || gheaderbuffer[1] != ID2) {
-        fprintf(stderr, "%s%s%s\n", "File:", filesrc, " is not a gzip archive\n");
+        fprintf(stderr, "File: %s is not a gzip archive\n", filesrc);
         exit(EXIT_FAILURE);
     }
 
@@ -138,7 +138,7 @@ int main(int argc, char ** argv)
             fflush(stdout);
             
             if(!fgets(newtime, sizeof(newtime), stdin)) {
-                fprintf(stderr, "Error reading from stdin");
+                fprintf(stderr, "Error reading from stdin\n");
                 exit(EXIT_FAILURE);
             }
 
@@ -185,28 +185,28 @@ void printTime(const time_t t)
     printf("%s\n", gheaderbuffer);
 }
 
-void displayHelp(void)
+void displayHelp(char * name)
 {
-    printf("Usage: gziptimetravel [OPTIONS...] SOURCE\n"
+    printf("Usage: %s [OPTIONS...] SOURCE\n"
            "Set or view timestamp of gzip archives\n"
            "\n"
            "  -p                       print formatted timestamp to stdout\n"
            "  -s [seconds from epoch]  set timestamp of file\n"
            "  -S                       set timestamp of file from stdin\n"
            "\n"
-           "If no flags other than file are given gziptimetravel will output inputs timestamp as seconds since epoch\n"
-           "\n");
+           "If no flags other than file are given %s will output inputs timestamp as seconds since epoch\n"
+           "\n", name, name);
     printf("EXAMPLES:\n"
-           "  gziptimetravel input.tar.gz\n"
+           "  %s input.tar.gz\n"
            "                      Print input.tar.gz's timestamp\n"
            "\n"
-           "  gziptimetravel -s0 input.tar.gz\n"
+           "  %s -s0 input.tar.gz\n"
            "                      Set input.tar.gz's timestamp to January 1st 1970\n"
            "\n"
-           "  echo \"123456789\" | gziptimetravel -S input.tar.gz\n"
+           "  echo \"123456789\" | %s -S input.tar.gz\n"
            "                      Set input.tar.gz's timestamp to 1973-11-29 November 29th 1973\n"
            "\n"
-           "\n");
+           "\n", name, name, name);
     printf("Report gziptimetravel bugs to whackashoe@gmail.com\n"
            "gziptimetravel homepage: <https://github.com/whackashoe/gziptimetravel/>\n");
 }
