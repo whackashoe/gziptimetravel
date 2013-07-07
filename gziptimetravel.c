@@ -16,7 +16,7 @@
 #include <string.h>
 #include <ctype.h>
 
-const char * VERSION = "1.0";
+#include <gziptimetravel.h>
 
 void displayHelp(void);
 void displayVersion(void);
@@ -212,5 +212,5 @@ void displayHelp(void)
 
 void displayVersion(void)
 {
-    printf("%s%s\n", "gziptimetravel ", VERSION);
+    printf("%s%d%c%d\n", "gziptimetravel ", GZIPTIMETRAVEL_VERSION_MAJOR, '.', GZIPTIMETRAVEL_VERSION_MINOR);
 }
