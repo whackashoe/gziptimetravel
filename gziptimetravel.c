@@ -78,9 +78,9 @@ int main(int argc, char ** argv)
                     fprintf (stderr, "Unknown option character `\\x%x'.\n", optopt);
 
                 fprintf(stderr, "Try gziptimetravel --help\n");
-                exit(1);
+                exit(EXIT_FAILURE);
             default:
-                exit(1);
+                exit(EXIT_FAILURE);
         }
     }
     
@@ -93,19 +93,19 @@ int main(int argc, char ** argv)
     
     if(!fileflag) {
         fprintf(stderr, "Missing file operand (\"gziptimetravel --help\" for help)\n");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     fp = fopen(filesrc, (settimeflag) ? "r+b" : "r");
     if(fp == NULL) {
-        fprintf(stderr, "%s%s\n", filesrc, ": No such file");
-        exit(1);
+        perror(filesrc);
+        exit(EXIT_FAILURE);
     }
     
     gheaderbytes = fread(gheaderbuffer, sizeof(unsigned char), sizeof(gheaderbuffer), fp);
     if(gheaderbytes < sizeof(gheaderbuffer)) {
         fprintf(stderr, "%s%lu%s\n", "Only read ", gheaderbytes, " bytes");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     /* gzip's 8 byte header format:
@@ -119,7 +119,7 @@ int main(int argc, char ** argv)
 
     if(gheaderbuffer[0] != ID1 || gheaderbuffer[1] != ID2) {
         fprintf(stderr, "%s%s%s\n", "File:", filesrc, " is not a gzip archive\n");
-        exit(1);
+        exit(EXIT_FAILURE);
     }
 
     if(!printtimeflag && !settimeflag) {
@@ -138,7 +138,7 @@ int main(int argc, char ** argv)
             
             if(!fgets(newtime, sizeof(newtime), stdin)) {
                 fprintf(stderr, "Error reading from stdin");
-                exit(1);
+                exit(EXIT_FAILURE);
             }
 
             newtimelength = strlen(newtime);
@@ -150,11 +150,11 @@ int main(int argc, char ** argv)
         ntime = strtoul(newtime, &tnewtime, 0);
         if(errno != 0) {
             fprintf(stderr, "Conversion of time failed, EINVAL, ERANGE\n");
-            exit(1);
+            exit(EXIT_FAILURE);
         }
         if(*tnewtime != 0) {
             fprintf(stderr, "Conversion of time failed, pass an unsigned integer\n");
-            exit(1);
+            exit(EXIT_FAILURE);
         }
 
         fseek(fp, 4, SEEK_SET);
