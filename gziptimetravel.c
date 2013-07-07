@@ -62,11 +62,11 @@ int main(int argc, char ** argv)
             case '-':
                 if(strcmp(optarg, "help") == 0) {
                     displayHelp();
-                    exit(0);
+                    exit(EXIT_SUCCESS);
                 }
                 if(strcmp(optarg, "version") == 0) {
                     displayVersion();
-                    exit(0);
+                    exit(EXIT_SUCCESS);
                 }
                 break;
             case '?':
