@@ -202,7 +202,7 @@ void displayHelp(void)
            "  gziptimetravel -s0 input.tar.gz\n"
            "                      Set input.tar.gz's timestamp to January 1st 1970\n"
            "\n"
-           "  echo \"123456789\" | gziptimetravel -S input.tar.gz"
+           "  echo \"123456789\" | gziptimetravel -S input.tar.gz\n"
            "                      Set input.tar.gz's timestamp to 1973-11-29 November 29th 1973\n"
            "\n"
            "\n");
