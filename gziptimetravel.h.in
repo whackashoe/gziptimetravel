@@ -1,7 +1,71 @@
+/* Copyright (C) 2013 Jett LaRue
+*
+* Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+*
+* The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+*
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/
+
+
 #ifndef GZIPTIMETRAVEL_H
 #define GZIPTIMETRAVEL_H
 
 #define GZIPTIMETRAVEL_VERSION_MAJOR @GZIPTIMETRAVEL_VERSION_MAJOR@
 #define GZIPTIMETRAVEL_VERSION_MINOR @GZIPTIMETRAVEL_VERSION_MINOR@
+
+struct Flags {
+    int prettyPrintTime;
+    int setTime;
+    unsigned long newTime;
+    char newTimeStr[11];
+};
+
+/**Applies a 3d translation transformation (moves the drawing pen for all following objects of frame)
+* @param flags options to apply
+* @param filesrc gzip file to load
+* @return 1 if successful, 0 if unsucessful*/
+int gziptimetravel(const struct Flags * flags, const char * filesrc);
+
+/**Checks to see if file has correct gzip header
+* @param header first two bytes of file
+* @return 1 if successful, 0 if unsucessful*/
+int verifyGzipHeader(const unsigned char header[2]);
+
+/**Grabs time value from stdin as an unsigned long, on failure exits from program
+* @return input from stdin*/
+char * grabTimeFromStdin();
+
+/**Attempts to convert string to unsigned long, on failure exits from program
+* @param str input string (formatted as unsigned long integer)
+* @return converted input*/
+unsigned long convertStrToTime(const char * str);
+
+/**Converts 4 byte mtime header to time_t
+* @param vals mtime block of header
+* @return converted value*/
+time_t getTime(const unsigned char vals[4]);
+
+/**Sets files mtime header
+* @param fp file pointer to header
+* @param t seconds since epoch
+* @return 1 if successful, 0 if unsucessful*/
+int setFileTime(FILE * fp, const unsigned long t);
+
+/**Prints seconds from epoch to stdout
+* @param nttime value to print*/
+void printSecondsFromEpoch(const time_t nttime);
+
+/**Prints seconds from epoch to stdout as YYYY-MM-DD HH:MM:SS
+* @param t time to print out8*/
+void prettyPrintTime(const time_t t);
+
+/**Prints help text of program to stdout, invoked when --help is passed
+* @param name name of program, argv[0]*/
+void displayHelp(const char * name);
+
+/**Prints version to stdout*/
+void displayVersion(void);
+
 
 #endif

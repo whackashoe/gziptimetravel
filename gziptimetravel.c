@@ -18,48 +18,33 @@
 
 #include <gziptimetravel.h>
 
-void displayHelp(char * name);
-void displayVersion(void);
-time_t getTime(const unsigned char vals[4]);
-void printSecondsFromEpoch(const time_t t);
-void prettyPrintTime(const time_t t);
-
 
 int main(int argc, char ** argv) 
 {
-    int printtimeflag  = 0; /*do we pretty print?*/
-    int settimeflag    = 0; /*do we alter time on file*/
-    int grabfrominflag = 0; /*are we getting input from stdin?*/
-    int fileflag       = 0; /*is a file set*/
-
-    const char * filesrc = NULL; /*path to input file passed*/
-    char newtime[11]; /*passed in time (since epoch)*/
-    char * tnewtime; /*temporary newtime for checking if newtime->ntime conversion succeeded*/
-    size_t newtimelength; /*length of newtime buffer*/ 
-    unsigned long ntime; /*the value of newtime*/
-    FILE *fp; /*input file*/
-    unsigned char gheaderbuffer[8]; /*buffer to hold header of gzip input file*/
-    size_t gheaderbytes; /*how many bytes read into gheaderbuffer*/
-    
-    const unsigned char ID1 = 0x1f; /*IDentifier 1 (for gzip detection of file)*/
-    const unsigned char ID2 = 0x8b; /*IDentifier 2*/
-    
+    struct Flags flags;
     int i; /*for loop iterator*/
     int c; /*option iteration*/
+
+    flags.prettyPrintTime = 0;
+    flags.setTime = 0;
+    flags.newTime = 0;
+
     opterr = 0;
     while((c = getopt (argc, argv, "ps:S-:")) != -1) {
         switch(c) {
             case 'p':
-                printtimeflag = 1;
+                flags.prettyPrintTime = 1;
                 break;
             case 's':
-                settimeflag = 1;
-                strncpy(newtime, optarg, sizeof(newtime)-1);
-                newtime[sizeof(newtime)-1] = '\0';
+                flags.setTime = 1;
+                strncpy(flags.newTimeStr, optarg, sizeof(flags.newTimeStr)-1);
+                flags.newTimeStr[sizeof(flags.newTimeStr)-1] = '\0';
+                flags.newTime = convertStrToTime(flags.newTimeStr);
                 break;
             case 'S':
-                settimeflag = 1;
-                grabfrominflag = 1;
+                flags.setTime = 1;
+                strncpy(flags.newTimeStr, grabTimeFromStdin(), sizeof(flags.newTimeStr)-1);
+                flags.newTime = convertStrToTime(flags.newTimeStr);
                 break;
             case '-':
                 if(strcmp(optarg, "help") == 0) {
@@ -86,30 +71,76 @@ int main(int argc, char ** argv)
         }
     }
     
-    for (i = optind; i < argc; i++) {
-        if(!fileflag) {
-            fileflag = 1;
-            filesrc = argv[i];
-        }
-    }
-    
-    if(!fileflag) {
+    if(optind >= argc) {
         fprintf(stderr, "Missing file operand (\"%s --help\" for help)\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
-    fp = fopen(filesrc, (settimeflag) ? "r+b" : "r");
+    argc -= optind;
+    argv += optind;
+
+    for (i = 0; i < argc; ++i) {
+        gziptimetravel(&flags, argv[i]);
+    }
+
+    exit(EXIT_SUCCESS);
+    return 0;
+}
+
+int gziptimetravel(const struct Flags * flags, const char * filesrc)
+{
+    FILE * fp;
+    unsigned char header[8];
+    size_t header_l;
+
+    fp = fopen(filesrc, (flags->setTime) ? "r+b" : "r");
     if(fp == NULL) {
         perror(filesrc);
-        exit(EXIT_FAILURE);
+        return 0;
     }
-    
-    gheaderbytes = fread(gheaderbuffer, sizeof(unsigned char), sizeof(gheaderbuffer), fp);
-    if(gheaderbytes < sizeof(gheaderbuffer)) {
-        fprintf(stderr, "Only read %lu bytes\n", gheaderbytes);
+
+    header_l = fread(header, sizeof(unsigned char), sizeof(header), fp);
+    if(header_l < sizeof(header)) {
+        fprintf(stderr, "Only read %lu bytes\n", header_l);
+        return 0;
+    }
+
+    if(!verifyGzipHeader(header)) {
+        fprintf(stderr, "File: %s is not a gzip archive\n", filesrc);
+        return 0;
+    }
+
+    if(!flags->prettyPrintTime && !flags->setTime)
+        printSecondsFromEpoch(getTime(header+4));
+
+    if(flags->prettyPrintTime)
+        prettyPrintTime(getTime(header+4));
+
+    if(flags->setTime)
+        if(!setFileTime(fp, flags->newTime)) {
+            perror(filesrc);
+            return 0;
+        }
+
+    fclose(fp);
+    return 1;
+}
+
+unsigned long convertStrToTime(const char * str) {
+    unsigned long t;
+
+    errno = 0;
+    t = strtoul(str, '\0', 0);
+    if(errno != 0) {
+        fprintf(stderr, "Conversion of time failed, EINVAL, ERANGE\n");
         exit(EXIT_FAILURE);
     }
 
+    return t;
+}
+
+int verifyGzipHeader(const unsigned char header[2])
+{
     /* gzip's 8 byte header format:
      * bytes name desc
      * 1: ID1   -- (IDentification 1)
@@ -118,52 +149,29 @@ int main(int argc, char ** argv)
      * 1: FLG   -- (FLaGs)
      * 4: MTIME -- (Modification TIME)
      */
+    const unsigned char ID1 = 0x1f;
+    const unsigned char ID2 = 0x8b;
 
-    if(gheaderbuffer[0] != ID1 || gheaderbuffer[1] != ID2) {
-        fprintf(stderr, "File: %s is not a gzip archive\n", filesrc);
+    if(header[0] != ID1 || header[1] != ID2)
+        return 0;
+
+    return 1;
+}
+
+char * grabTimeFromStdin() {
+    char * newtime = NULL;
+    size_t newtime_l;
+
+    fflush(stdout);
+    if(!fgets(newtime, sizeof(newtime), stdin)) {
+        fprintf(stderr, "Error reading from stdin\n");
         exit(EXIT_FAILURE);
     }
 
-    if(!printtimeflag && !settimeflag)
-        printSecondsFromEpoch(getTime(gheaderbuffer+4));
+    newtime_l = strlen(newtime);
+    if(newtime[newtime_l-1] == '\n') newtime[--newtime_l] = '\0';
 
-    if(printtimeflag)
-        prettyPrintTime(getTime(gheaderbuffer+4));
-
-    if(settimeflag) {
-        if(grabfrominflag) {
-            fflush(stdout);
-            
-            if(!fgets(newtime, sizeof(newtime), stdin)) {
-                fprintf(stderr, "Error reading from stdin\n");
-                exit(EXIT_FAILURE);
-            }
-
-            newtimelength = strlen(newtime);
-            if(newtime[newtimelength-1] == '\n') newtime[--newtimelength] = '\0';
-        }
-    
-        tnewtime = newtime;
-        errno = 0;
-        ntime = strtoul(newtime, &tnewtime, 0);
-        if(errno != 0) {
-            fprintf(stderr, "Conversion of time failed, EINVAL, ERANGE\n");
-            exit(EXIT_FAILURE);
-        }
-        if(*tnewtime != 0) {
-            fprintf(stderr, "Conversion of time failed, pass an unsigned integer\n");
-            exit(EXIT_FAILURE);
-        }
-
-        fseek(fp, 4, SEEK_SET);
-        fputc((ntime       & 0xFF), fp);
-        fputc((ntime >> 8  & 0xFF), fp);
-        fputc((ntime >> 16 & 0xFF), fp);
-        fputc((ntime >> 24 & 0xFF), fp);
-    }
-
-    fclose(fp);
-    return 0;
+    return newtime;
 }
 
 time_t getTime(const unsigned char vals[4])
@@ -174,6 +182,17 @@ time_t getTime(const unsigned char vals[4])
                    (vals[3] << 24);
     return mtime; 
 }
+
+int setFileTime(FILE * fp, const unsigned long ntime) {
+    if(    (fseek(fp, 4, SEEK_SET) != 0)
+        || (fputc((ntime       & 0xFF), fp) == EOF)
+        || (fputc((ntime >> 8  & 0xFF), fp) == EOF)
+        || (fputc((ntime >> 16 & 0xFF), fp) == EOF)
+        || (fputc((ntime >> 24 & 0xFF), fp) == EOF)) return 0;
+
+    return 1;
+}
+
 
 void printSecondsFromEpoch(const time_t t)
 {
@@ -187,9 +206,9 @@ void prettyPrintTime(const time_t t)
     printf("%s\n", gheaderbuffer);
 }
 
-void displayHelp(char * name)
+void displayHelp(const char * name)
 {
-    printf("Usage: %s [OPTIONS...] SOURCE\n"
+    printf("Usage: %s [OPTIONS...] [FILES...]\n"
            "Set or view timestamp of gzip archives\n"
            "\n"
            "  -p                       print formatted timestamp to stdout\n"
