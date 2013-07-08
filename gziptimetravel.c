@@ -21,7 +21,8 @@
 void displayHelp(char * name);
 void displayVersion(void);
 time_t getTime(const unsigned char vals[4]);
-void printTime(const time_t t);
+void printSecondsFromEpoch(const time_t t);
+void prettyPrintTime(const time_t t);
 
 
 int main(int argc, char ** argv) 
@@ -123,15 +124,11 @@ int main(int argc, char ** argv)
         exit(EXIT_FAILURE);
     }
 
-    if(!printtimeflag && !settimeflag) {
-        time_t mtime = getTime(gheaderbuffer+4);
-        printf("%lu\n", mtime);
-    }
+    if(!printtimeflag && !settimeflag)
+        printSecondsFromEpoch(getTime(gheaderbuffer+4));
 
-    if(printtimeflag) {
-        time_t mtime = getTime(gheaderbuffer+4);
-        printTime(mtime);
-    }
+    if(printtimeflag)
+        prettyPrintTime(getTime(gheaderbuffer+4));
 
     if(settimeflag) {
         if(grabfrominflag) {
@@ -178,7 +175,12 @@ time_t getTime(const unsigned char vals[4])
     return mtime; 
 }
 
-void printTime(const time_t t)
+void printSecondsFromEpoch(const time_t t)
+{
+    printf("%lu\n", t);
+}
+
+void prettyPrintTime(const time_t t)
 {
     char gheaderbuffer[100];
     strftime(gheaderbuffer, 100, "%Y-%m-%d %H:%M:%S", localtime(&t));
