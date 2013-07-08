@@ -18,6 +18,7 @@ struct Flags {
     int prettyPrintTime;
     int printSrc;
     int setTime;
+    int setModificationTime;
     unsigned long newTime;
     char newTimeStr[11];
 };
@@ -52,6 +53,12 @@ time_t getTime(const unsigned char vals[4]);
 * @param t seconds since epoch
 * @return 1 if successful, 0 if unsucessful*/
 int setFileTime(FILE * fp, const unsigned long t);
+
+/**Sets files Modify header to the prior mtime header value
+* @param src file source
+* @param mtime time to set
+* @return 1 if successful, 0 if unsucessful*/
+int setFileModificationTime(const char * src, time_t mtime);
 
 /**Prints name of file to stdout
 * @param src value to print*/

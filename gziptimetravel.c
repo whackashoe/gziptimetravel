@@ -15,8 +15,9 @@
 #include <errno.h>
 #include <string.h>
 #include <ctype.h>
+#include <utime.h>
 
-#include <gziptimetravel.h>
+#include "gziptimetravel.h"
 
 
 int main(int argc, char ** argv) 
@@ -25,19 +26,23 @@ int main(int argc, char ** argv)
     int i; /*for loop iterator*/
     int c; /*option iteration*/
 
-    flags.prettyPrintTime = 0;
-    flags.printSrc = 0;
-    flags.setTime = 0;
-    flags.newTime = 0;
+    flags.prettyPrintTime     = 0;
+    flags.printSrc            = 0;
+    flags.setTime             = 0;
+    flags.setModificationTime = 0;
+    flags.newTime             = 0;
 
     opterr = 0;
-    while((c = getopt (argc, argv, "pns:S-:")) != -1) {
+    while((c = getopt (argc, argv, "pnms:S-:")) != -1) {
         switch(c) {
             case 'p':
                 flags.prettyPrintTime = 1;
                 break;
             case 'n':
                 flags.printSrc = 1;
+                break;
+            case 'm':
+                flags.setModificationTime = 1;
                 break;
             case 's':
                 flags.setTime = 1;
@@ -93,42 +98,72 @@ int main(int argc, char ** argv)
 
 int gziptimetravel(const struct Flags * flags, const char * filesrc)
 {
+    int ret = 1;
     FILE * fp;
     unsigned char header[8];
     size_t header_l;
+    time_t file_mtime;
 
     fp = fopen(filesrc, (flags->setTime) ? "r+b" : "r");
     if(fp == NULL) {
         perror(filesrc);
-        return 0;
+        ret = 0;
+        goto closeFile;
     }
 
     header_l = fread(header, sizeof(unsigned char), sizeof(header), fp);
     if(header_l < sizeof(header)) {
         fprintf(stderr, "Only read %lu bytes\n", header_l);
-        return 0;
+        ret = 0;
+        goto closeFile;
     }
 
     if(!verifyGzipHeader(header)) {
         fprintf(stderr, "File: %s is not a gzip archive\n", filesrc);
-        return 0;
+        ret = 0;
+        goto closeFile;
     }
 
+    file_mtime = getTime(header+4);
+
     if(flags->printSrc) printFileSrc(filesrc);
+
     if(!flags->prettyPrintTime && !flags->setTime)
-        printSecondsFromEpoch(getTime(header+4));
+        printSecondsFromEpoch(file_mtime);
 
     if(flags->prettyPrintTime)
-        prettyPrintTime(getTime(header+4));
+        prettyPrintTime(file_mtime);
 
     if(flags->setTime)
         if(!setFileTime(fp, flags->newTime)) {
             perror(filesrc);
-            return 0;
+            ret = 0;
+            printf("dlasdlasdas");
+            goto closeFile;
         }
 
+closeFile:
     fclose(fp);
-    return 1;
+
+    if(flags->setModificationTime) {
+        if(!setFileModificationTime(filesrc, file_mtime)) {
+            perror(filesrc);
+            ret = 0;
+        }
+    }
+
+    return ret;
+}
+
+int setFileModificationTime(const char * src, time_t mtime)
+{
+    struct utimbuf ubuf;
+    ubuf.modtime = mtime;
+    time(&ubuf.actime);
+    if(utime(src, &ubuf) != 0) 
+        return 0;
+    else
+        return 1;
 }
 
 unsigned long convertStrToTime(const char * str)
@@ -225,6 +260,7 @@ void displayHelp(const char * name)
            "\n"
            "  -p                       print formatted timestamp to stdout\n"
            "  -n                       print name of file to stdout\n"
+           "  -m                       set files modification timestamp to mtime value\n"
            "  -s [seconds from epoch]  set timestamp of file\n"
            "  -S                       set timestamp of file from stdin\n"
            "\n"
