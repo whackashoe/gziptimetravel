@@ -30,4 +30,8 @@ Find out when the gzip archive was created:
 
 Set the timestamp of all files to '0':
 
-```find *.gz | xargs gziptimetravel -s0```
+```gziptimetravel -s0 *.gz```
+
+Set the modification time of the file to the mtime header value, while setting header value to 0, pretty printing the time, and printing out the name of the file:
+
+```gziptimetravel -npms0 *.gz```
