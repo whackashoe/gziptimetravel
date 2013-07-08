@@ -26,14 +26,18 @@ int main(int argc, char ** argv)
     int c; /*option iteration*/
 
     flags.prettyPrintTime = 0;
+    flags.printSrc = 0;
     flags.setTime = 0;
     flags.newTime = 0;
 
     opterr = 0;
-    while((c = getopt (argc, argv, "ps:S-:")) != -1) {
+    while((c = getopt (argc, argv, "pns:S-:")) != -1) {
         switch(c) {
             case 'p':
                 flags.prettyPrintTime = 1;
+                break;
+            case 'n':
+                flags.printSrc = 1;
                 break;
             case 's':
                 flags.setTime = 1;
@@ -110,6 +114,7 @@ int gziptimetravel(const struct Flags * flags, const char * filesrc)
         return 0;
     }
 
+    if(flags->printSrc) printFileSrc(filesrc);
     if(!flags->prettyPrintTime && !flags->setTime)
         printSecondsFromEpoch(getTime(header+4));
 
@@ -126,7 +131,8 @@ int gziptimetravel(const struct Flags * flags, const char * filesrc)
     return 1;
 }
 
-unsigned long convertStrToTime(const char * str) {
+unsigned long convertStrToTime(const char * str)
+{
     unsigned long t;
 
     errno = 0;
@@ -158,7 +164,8 @@ int verifyGzipHeader(const unsigned char header[2])
     return 1;
 }
 
-char * grabTimeFromStdin() {
+char * grabTimeFromStdin()
+{
     char * newtime = NULL;
     size_t newtime_l;
 
@@ -183,7 +190,8 @@ time_t getTime(const unsigned char vals[4])
     return mtime; 
 }
 
-int setFileTime(FILE * fp, const unsigned long ntime) {
+int setFileTime(FILE * fp, const unsigned long ntime)
+{
     if(    (fseek(fp, 4, SEEK_SET) != 0)
         || (fputc((ntime       & 0xFF), fp) == EOF)
         || (fputc((ntime >> 8  & 0xFF), fp) == EOF)
@@ -193,6 +201,10 @@ int setFileTime(FILE * fp, const unsigned long ntime) {
     return 1;
 }
 
+void printFileSrc(const char * src)
+{
+    printf("%s\t", src);
+}
 
 void printSecondsFromEpoch(const time_t t)
 {
@@ -212,6 +224,7 @@ void displayHelp(const char * name)
            "Set or view timestamp of gzip archives\n"
            "\n"
            "  -p                       print formatted timestamp to stdout\n"
+           "  -n                       print name of file to stdout\n"
            "  -s [seconds from epoch]  set timestamp of file\n"
            "  -S                       set timestamp of file from stdin\n"
            "\n"

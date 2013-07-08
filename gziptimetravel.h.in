@@ -16,6 +16,7 @@
 
 struct Flags {
     int prettyPrintTime;
+    int printSrc;
     int setTime;
     unsigned long newTime;
     char newTimeStr[11];
@@ -51,6 +52,10 @@ time_t getTime(const unsigned char vals[4]);
 * @param t seconds since epoch
 * @return 1 if successful, 0 if unsucessful*/
 int setFileTime(FILE * fp, const unsigned long t);
+
+/**Prints name of file to stdout
+* @param src value to print*/
+void printFileSrc(const char * src);
 
 /**Prints seconds from epoch to stdout
 * @param nttime value to print*/
