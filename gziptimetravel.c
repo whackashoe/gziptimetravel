@@ -107,8 +107,7 @@ int gziptimetravel(const struct Flags * flags, const char * filesrc)
     fp = fopen(filesrc, (flags->setTime) ? "r+b" : "r");
     if(fp == NULL) {
         perror(filesrc);
-        ret = 0;
-        goto closeFile;
+        return 0;
     }
 
     header_l = fread(header, sizeof(unsigned char), sizeof(header), fp);
